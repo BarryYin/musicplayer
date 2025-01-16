@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Music Player</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #242424;
+            color: #fff;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        .container {
+            text-align: center;
+            width: 80%;
+        }
+        .lyrics {
+            margin-bottom: 20px;
+            height: 200px;
+            overflow-y: auto;
+            scroll-behavior: smooth;
+            color: #fff;
+            font-size: 18px;
+            line-height: 1.6;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .lyrics p {
+            margin: 10px 0;
+            padding: 5px 0;
+            transition: all 0.3s ease;
+        }
+        .highlight {
+            color: #ff6b6b;
+            font-weight: bold;
+            transform: scale(1.1);
+            transition: all 0.2s ease;
+        }
+        .controls {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 20px;
+        }
+        .controls button {
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: #fff;
+            font-size: 20px;
+        }
+        .progress-bar {
+            width: 100%;
+            height: 5px;
+            background-color: #333;
+            margin-top: 20px;
+        }
+        .progress {
+            height: 100%;
+            background-color: #ff6b6b;
+        }
+    </style>
+</head>
+<body>
+    <audio id="audioPlayer" src="NSwitchRobot - Stay Alive.mp3"></audio>
+    <div class="container">
+        <div id="lyrics" class="lyrics"></div>
+        <div class="controls">
+            <button onclick="previousTrack()">⏮</button>
+            <button onclick="playPause()">⏯</button>
+            <button onclick="nextTrack()">⏭</button>
+        </div>
+        <div class="progress-bar">
+            <div class="progress" style="width: 0%"></div>
+        </div>
+    </div>
+
+    <script>
+        let isPlaying = false;
+        const audioPlayer = document.getElementById('audioPlayer');
+        const lyricsElement = document.getElementById('lyrics');
+        const progressElement = document.querySelector('.progress');
+
+        let lyrics = [];
+
+        // 从文件中读取歌词
+        fetch('Stay Alive lyrics_synced.txt')
+            .then(response => response.text())
+            .then(data => {
+                // 解析歌词文件，提取时间戳和歌词内容
+                const lines = data.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+                lyrics = lines.map(line => {
+                    const timeMatch = line.match(/\[(\d{2}):(\d{2})\.(\d{2})\](.*)/);
+                    if (timeMatch) {
+                        const minutes = parseInt(timeMatch[1], 10);
+                        const seconds = parseInt(timeMatch[2], 10);
+                        const milliseconds = parseInt(timeMatch[3], 10);
+                        const time = (minutes * 60 + seconds) + milliseconds / 1000;
+                        const text = timeMatch[4].trim();
+                        return { time, text };
+                    }
+                    return null;
+                }).filter(line => line !== null);
+
+                // 渲染歌词
+                lyricsElement.innerHTML = lyrics.map(line => `<p>${line.text}</p>`).join('');
+            })
+            .catch(error => console.error('Error loading lyrics:', error));
+
+        function playPause() {
+            if (isPlaying) {
+                audioPlayer.pause();
+                isPlaying = false;
+            } else {
+                audioPlayer.play();
+                isPlaying = true;
+            }
+        }
+
+        function previousTrack() {
+            // Logic to go to previous track
+            // For demonstration, we'll just restart the current track
+            audioPlayer.currentTime = 0;
+        }
+
+        function nextTrack() {
+            // Logic to go to next track
+            // For demonstration, we'll just restart the current track
+            audioPlayer.currentTime = 0;
+        }
+
+        audioPlayer.addEventListener('timeupdate', () => {
+            const progressPercent = (audioPlayer.currentTime / audioPlayer.duration) * 100;
+            progressElement.style.width = progressPercent + '%';
+
+            // 更新歌词显示
+            const lyricsLines = lyricsElement.getElementsByTagName('p');
+            const currentTime = audioPlayer.currentTime;
+            let currentLineIndex = lyrics.findIndex(line => line.time > currentTime) - 1;
+
+            // 高亮当前行
+            if (currentLineIndex >= 0 && currentLineIndex < lyricsLines.length) {
+                for (let line of lyricsLines) {
+                    line.classList.remove('highlight');
+                }
+                lyricsLines[currentLineIndex].classList.add('highlight');
+            }
+
+            // 延迟滚动，确保歌词显示完整
+            setTimeout(() => {
+                if (currentLineIndex >= 0 && currentLineIndex < lyricsLines.length) {
+                    const currentLine = lyricsLines[currentLineIndex];
+                    const container = document.querySelector('.lyrics');
+                    const lineTop = currentLine.offsetTop;
+                    const lineHeight = currentLine.offsetHeight;
+                    const containerHeight = container.offsetHeight;
+                    const scrollTo = Math.max(0, lineTop - (containerHeight / 2) + (lineHeight / 2));
+                    
+                    // 只在需要时滚动
+                    if (Math.abs(container.scrollTop - scrollTo) > 50) {
+                        container.scrollTo({
+                            top: scrollTo,
+                            behavior: 'smooth'
+                        });
+                    }
+                }
+            }, 500);
+        });
+    </script>
+</body>
+</html>

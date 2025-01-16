@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>飞机避障游戏</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #87CEEB;
+        }
+        canvas {
+            border: 1px solid #000;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas" width="600" height="800"></canvas> <!-- 修改: 将canvas宽度从400改为600 -->
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        const plane = {
+            x: 50,
+            y: canvas.height / 2,
+            width: 30,
+            height: 30,
+            dy: 0,
+            gravity: 0.2, // 修改: 将重力改为0.2以实现更平滑的移动
+            lift: -5, // 修改: 将升力改为-5以实现更平滑的移动
+            speed: 2 // 新增: 飞机移动速度
+        };
+
+        const obstacles = [];
+        let score = 0;
+        let gameOver = false;
+        let isJumping = false; // 新增变量用于控制跳跃状态
+        let isMovingDown = false; // 新增变量用于控制向下移动状态
+
+        function drawPlane() {
+            ctx.fillStyle = 'blue';
+            ctx.fillRect(plane.x, plane.y, plane.width, plane.height);
+        }
+
+        function updatePlane() {
+            if (isJumping) {
+                plane.dy = plane.lift;
+            } else if (isMovingDown) { // 新增: 检查是否向下移动
+                plane.dy = plane.speed;
+            } else {
+                plane.dy = plane.gravity; // 修改: 停止跳跃时应用重力
+            }
+            plane.y += plane.dy;
+
+            if (plane.y + plane.height > canvas.height) {
+                plane.y = canvas.height - plane.height;
+                plane.dy = 0;
+            } else if (plane.y < 0) { // 新增: 防止飞机移出画布顶部
+                plane.y = 0;
+                plane.dy = 0;
+            }
+        }
+
+        function drawObstacles() {
+            obstacles.forEach(obstacle => {
+                ctx.fillStyle = 'green';
+                ctx.fillRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
+            });
+        }
+
+        function updateObstacles() {
+            obstacles.forEach(obstacle => {
+                obstacle.x -= 2; // 修改: 将障碍物速度从3改为2
+            });
+
+            if (obstacles.length > 0 && obstacles[0].x + obstacles[0].width < 0) {
+                obstacles.shift();
+                score++;
+            }
+
+            if (Math.random() < 0.005) { // 修改: 将障碍物生成频率从0.01改为0.005
+                const obstacleHeight = Math.random() * (canvas.height - 100) + 50;
+                obstacles.push({
+                    x: canvas.width,
+                    y: 0,
+                    width: 50,
+                    height: obstacleHeight
+                });
+                obstacles.push({
+                    x: canvas.width,
+                    y: obstacleHeight + 100,
+                    width: 50,
+                    height: canvas.height - obstacleHeight - 100
+                });
+            }
+        }
+
+        function checkCollision() {
+            for (let obstacle of obstacles) {
+                if (plane.x < obstacle.x + obstacle.width &&
+                    plane.x + plane.width > obstacle.x &&
+                    plane.y < obstacle.y + obstacle.height &&
+                    plane.y + plane.height > obstacle.y) {
+                    gameOver = true;
+                    break;
+                }
+            }
+        }
+
+        function drawScore() {
+            ctx.fillStyle = 'black';
+            ctx.font = '20px Arial';
+            ctx.fillText(`得分: ${score}`, 10, 20);
+        }
+
+        function drawGameOver() {
+            ctx.fillStyle = 'red';
+            ctx.font = '40px Arial';
+            ctx.fillText('游戏结束', canvas.width / 2 - 100, canvas.height / 2);
+        }
+
+        function gameLoop() {
+            if (gameOver) {
+                drawGameOver();
+                return;
+            }
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawPlane();
+            drawObstacles();
+            drawScore();
+            updatePlane();
+            updateObstacles();
+            checkCollision();
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        function jump() {
+            if (gameOver) {
+                resetGame();
+            } else {
+                isJumping = true; // 修改跳跃状态
+            }
+        }
+
+        function stopJump() {
+            isJumping = false; // 修改跳跃状态
+        }
+
+        // 新增函数: 开始向下移动
+        function moveDown() {
+            if (!gameOver) {
+                isMovingDown = true;
+            }
+        }
+
+        // 新增函数: 停止向下移动
+        function stopMoveDown() {
+            isMovingDown = false;
+        }
+
+        function resetGame() {
+            plane.y = canvas.height / 2;
+            plane.dy = 0;
+            obstacles.length = 0;
+            score = 0;
+            gameOver = false;
+        }
+
+        document.addEventListener('keydown', (event) => {
+            if (event.code === 'ArrowUp') {
+                jump();
+            } else if (event.code === 'ArrowDown') { // 新增: 监听下箭头键
+                moveDown();
+            }
+        });
+
+        document.addEventListener('keyup', (event) => {
+            if (event.code === 'ArrowUp') {
+                stopJump();
+            } else if (event.code === 'ArrowDown') { // 新增: 监听下箭头键释放
+                stopMoveDown();
+            }
+        });
+
+        gameLoop();
+    </script>
+</body>
+</html>
